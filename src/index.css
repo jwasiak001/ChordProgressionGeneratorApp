@@ -1,0 +1,57 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #0a0a0b;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #fff;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: oklch(0.28 0 0);
+  border-radius: 2px;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  border: none;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  border: none;
+}
+
+@keyframes cpg-pulse {
+  0%, 100% { transform: scale(0.7); opacity: 0.35; }
+  50%       { transform: scale(1.0); opacity: 1; }
+}
+
+@keyframes cpg-flash {
+  0%   { transform: scale(1.6); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.5; }
+}
+
+.hide-scroll::-webkit-scrollbar { display: none; }
