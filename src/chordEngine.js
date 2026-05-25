@@ -53,7 +53,7 @@ function seventhInterval(root, seventh) {
   return ((seventh - root) + 12) % 12;
 }
 
-function diatonicChord(keyPc, pattern, degree, opts = {}) {
+export function diatonicChord(keyPc, pattern, degree, opts = {}) {
   const { useFlats = false, extension = 'triad' } = opts;
   const sc = scaleNotes(keyPc, pattern);
   const root      = sc[degree % 7];

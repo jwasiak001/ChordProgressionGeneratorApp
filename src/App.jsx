@@ -2,6 +2,7 @@ import React from 'react';
 import { IOSDevice } from './IOSFrame';
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio } from './TweaksPanel';
 import { MODES, KEYS, SOUNDS, AudioEngine, generateProgression } from './chordEngine';
+import { QuizTab } from './QuizTab';
 
 // ─── Accent palette ──────────────────────────────────────────────────────────
 
@@ -22,13 +23,106 @@ const TWEAK_DEFAULTS = {
   metronome: false,
 };
 
-// ─── App ─────────────────────────────────────────────────────────────────────
+// ─── App (shell: tabs + shared engine + tweaks) ───────────────────────────────
 
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
-  const [tweaksOpen, setTweaksOpen] = React.useState(false);
   const accent = ACCENTS[t.accent] || ACCENTS.amber;
+  const [tab, setTab] = React.useState('generator');
 
+  const engineRef = React.useRef(null);
+  if (!engineRef.current) engineRef.current = new AudioEngine();
+
+  // Stop playback whenever the user switches tabs
+  React.useEffect(() => { engineRef.current.stop(); }, [tab]);
+  React.useEffect(() => () => { engineRef.current.stop(); engineRef.current.dispose(); }, []);
+
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: '#0c0c0d',
+      color: 'oklch(0.95 0 0)',
+      fontFamily: '"Inter", -apple-system, sans-serif',
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {tab === 'generator' && (
+          <GeneratorTab t={t} setTweak={setTweak} accent={accent} engineRef={engineRef} />
+        )}
+        {tab === 'quiz' && (
+          <QuizTab t={t} accent={accent} engineRef={engineRef} />
+        )}
+      </div>
+      <BottomNav tab={tab} onTab={setTab} accent={accent} />
+    </div>
+  );
+}
+
+// ─── Bottom navigation ────────────────────────────────────────────────────────
+
+function BottomNav({ tab, onTab, accent }) {
+  const items = [
+    {
+      id: 'generator', label: 'Generator',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="3" />
+          <circle cx="8"  cy="8"  r="1.2" fill="currentColor" />
+          <circle cx="16" cy="16" r="1.2" fill="currentColor" />
+          <circle cx="16" cy="8"  r="1.2" fill="currentColor" />
+          <circle cx="8"  cy="16" r="1.2" fill="currentColor" />
+          <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+        </svg>
+      ),
+    },
+    {
+      id: 'quiz', label: 'Quiz',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M9.3 9.3a2.7 2.7 0 1 1 3.7 3.4c-.9.4-1 1-1 1.8" />
+          <circle cx="12" cy="17.2" r="0.6" fill="currentColor" stroke="none" />
+        </svg>
+      ),
+    },
+  ];
+
+  return (
+    <nav style={{
+      flex: '0 0 auto',
+      display: 'grid', gridTemplateColumns: '1fr 1fr',
+      borderTop: '1px solid oklch(0.20 0 0)',
+      background: 'oklch(0.10 0 0 / 0.96)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      paddingBottom: 30,
+      paddingTop: 8,
+    }}>
+      {items.map(it => {
+        const active = tab === it.id;
+        return (
+          <button key={it.id} onClick={() => onTab(it.id)} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            color: active ? accent.color : 'oklch(0.55 0 0)',
+            padding: '6px 0', fontFamily: 'inherit',
+            transition: 'color 0.12s',
+          }}>
+            {it.icon}
+            <div style={{ fontSize: 10.5, letterSpacing: '0.06em', fontWeight: active ? 600 : 500 }}>
+              {it.label}
+            </div>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+// ─── Generator tab ────────────────────────────────────────────────────────────
+
+function GeneratorTab({ t, setTweak, accent, engineRef }) {
   const [keyPc, setKeyPc] = React.useState(0);
   const [mode, setMode] = React.useState('major');
   const [length, setLength] = React.useState(4);
@@ -37,9 +131,8 @@ function App() {
   const [activeIdx, setActiveIdx] = React.useState(-1);
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [beatTick, setBeatTick] = React.useState(0);
+  const [tweaksOpen, setTweaksOpen] = React.useState(false);
 
-  const engineRef = React.useRef(null);
-  if (!engineRef.current) engineRef.current = new AudioEngine();
   const soundScrollerRef = React.useRef(null);
 
   const scrollSounds = () => {
@@ -58,7 +151,7 @@ function App() {
     e.onStep = (i) => setActiveIdx(i);
     e.onStop = () => setIsPlaying(false);
     e.onBeat = () => setBeatTick(n => n + 1);
-    return () => { e.stop(); e.dispose(); };
+    return () => { e.stop(); };
   }, []);
 
   React.useEffect(() => { engineRef.current.setBpm(t.tempo); }, [t.tempo]);
@@ -96,11 +189,9 @@ function App() {
   return (
     <div style={{
       width: '100%', height: '100%',
-      background: '#0c0c0d',
-      color: 'oklch(0.95 0 0)',
-      fontFamily: '"Inter", -apple-system, sans-serif',
       display: 'flex', flexDirection: 'column',
-      padding: '54px 22px 16px',
+      padding: '54px 22px 8px',
+      boxSizing: 'border-box',
       overflow: 'hidden',
     }}>
       {/* Header */}
@@ -123,10 +214,11 @@ function App() {
             cursor: 'pointer', display: 'grid', placeItems: 'center',
             transition: 'background 0.12s, color 0.12s',
           }}
-          aria-label="Settings"
+          aria-label="Appearance"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
         </button>
       </header>
@@ -187,10 +279,10 @@ function App() {
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="3"/>
-          <circle cx="8" cy="8" r="1.2" fill="currentColor"/>
+          <circle cx="8"  cy="8"  r="1.2" fill="currentColor"/>
           <circle cx="16" cy="16" r="1.2" fill="currentColor"/>
-          <circle cx="16" cy="8" r="1.2" fill="currentColor"/>
-          <circle cx="8" cy="16" r="1.2" fill="currentColor"/>
+          <circle cx="16" cy="8"  r="1.2" fill="currentColor"/>
+          <circle cx="8"  cy="16" r="1.2" fill="currentColor"/>
           <circle cx="12" cy="12" r="1.2" fill="currentColor"/>
         </svg>
         Randomize
@@ -264,7 +356,7 @@ function App() {
           >
             {Object.entries(SOUNDS).map(([k, s]) => (
               <button key={k} onClick={() => setTweak('sound', k)} style={{
-                ...soundChipStyle(t.sound === k, accent), flex: '0 0 auto',
+                ...soundChipStyle(t.sound === k), flex: '0 0 auto',
               }}>
                 {s.label}
               </button>
@@ -315,7 +407,7 @@ function App() {
         </div>
       </div>
 
-      {/* Tweaks panel */}
+      {/* Appearance tweaks panel (overlay) */}
       <TweaksPanel title="Appearance" open={tweaksOpen} onClose={() => setTweaksOpen(false)}>
         <TweakSection label="Accent" />
         <div style={{ display: 'flex', gap: 8, padding: '4px 0 12px' }}>
