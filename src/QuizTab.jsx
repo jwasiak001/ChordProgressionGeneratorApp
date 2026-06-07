@@ -169,7 +169,10 @@ export function QuizTab({ t, accent, engineRef }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 5 }}>
           {KEYS.map(k => (
             <button key={k.i}
-              onClick={() => !revealed && setGuess(g => ({ ...g, keyPc: k.i }))}
+              onClick={() => {
+                engineRef.current.playOne({ notes: [k.name + '4'] }, t.sound || 'piano', 0.7);
+                if (!revealed) setGuess(g => ({ ...g, keyPc: k.i }));
+              }}
               disabled={revealed}
               style={{
                 ...chip(guess.keyPc === k.i, accent, revealed && k.i === puzzle.keyPc, revealed && guess.keyPc === k.i && k.i !== puzzle.keyPc),

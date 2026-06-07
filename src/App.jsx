@@ -3,6 +3,7 @@ import { IOSDevice } from './IOSFrame';
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio } from './TweaksPanel';
 import { MODES, KEYS, SOUNDS, AudioEngine, generateProgression } from './chordEngine';
 import { QuizTab } from './QuizTab';
+import { IntervalsTab } from './IntervalsTab';
 
 // ─── Accent palette ──────────────────────────────────────────────────────────
 
@@ -53,6 +54,9 @@ function App() {
         {tab === 'quiz' && (
           <QuizTab t={t} accent={accent} engineRef={engineRef} />
         )}
+        {tab === 'intervals' && (
+          <IntervalsTab t={t} accent={accent} engineRef={engineRef} />
+        )}
       </div>
       <BottomNav tab={tab} onTab={setTab} accent={accent} />
     </div>
@@ -86,12 +90,22 @@ function BottomNav({ tab, onTab, accent }) {
         </svg>
       ),
     },
+    {
+      id: 'intervals', label: 'Intervals',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="3" y1="20" x2="3" y2="4" />
+          <line x1="3" y1="20" x2="21" y2="20" />
+          <polyline points="3,15 8,9 12,13 21,4" />
+        </svg>
+      ),
+    },
   ];
 
   return (
     <nav style={{
       flex: '0 0 auto',
-      display: 'grid', gridTemplateColumns: '1fr 1fr',
+      display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
       borderTop: '1px solid oklch(0.20 0 0)',
       background: 'oklch(0.10 0 0 / 0.96)',
       backdropFilter: 'blur(20px)',
